@@ -189,6 +189,10 @@ public class R2RMLMapParser {
 			parseTripleMap(classMap, r);
 			this.mapping.addClassMap(classMap);
 		}
+		
+		for (Resource resource : this.mapping.classMapResources()) {
+			parsePredicateObjectMaps(this.mapping.classMap(resource), resource);
+		}
 	}
 
 	private void parseTripleMap(ClassMap classMap, Resource tripleMap) {
@@ -203,13 +207,13 @@ public class R2RMLMapParser {
 		stmt = tripleMap.getProperty(RR.subjectMap);
 		Resource subjectMap = stmt.getResource();
 		stmt = subjectMap.getProperty(RR.class_);
-		Resource class_ = stmt.getResource();
-		classMap.addClass(class_);
+		if (stmt != null) {
+			Resource class_ = stmt.getResource();
+			classMap.addClass(class_);			
+		}
 		stmt = subjectMap.getProperty(RR.template);
 		String uriTemplate = genUriTemplate(classMap.getLogicalTable(), stmt.getString());
 		classMap.setURIPattern(ensureIsAbsolute(uriTemplate));
-		
-		parsePredicateObjectMaps(classMap, tripleMap);
 	}
 	
 	private String genUriTemplate(String logicalTable, String originalUri) {
