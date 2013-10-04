@@ -217,21 +217,25 @@ public class R2RMLMapParser {
 	}
 	
 	private String genUriTemplate(String logicalTable, String originalUri) {
-		String[] uriParts = originalUri.split("[{]");
-		String column = uriParts[1];
-		column = column.substring(0, column.length() - 1);
-		
-		StringBuffer template = new StringBuffer(uriParts[0]);
-		template.append("@@");
-		template.append(logicalTable);
-		template.append(".");
-		template.append(column);
-		
-		Attribute attribute = new Attribute(new RelationName(schemaName, logicalTable), column); 
-		if (!connectedDB.columnType(attribute).isIRISafe()) {
-			template.append("|encode");
+		StringBuffer template = new StringBuffer("");
+		int i = originalUri.indexOf('{');
+		while (i > -1) {
+			template.append(originalUri.substring(0, i));
+			int j = originalUri.indexOf('}');
+			String column = originalUri.substring(i+1, j);
+			template.append("@@");
+			template.append(logicalTable);
+			template.append(".");
+			template.append(column);
+			Attribute attribute = new Attribute(new RelationName(schemaName, logicalTable), column); 
+			if (!connectedDB.columnType(attribute).isIRISafe()) {
+				template.append("|encode");
+			}
+			template.append("@@");
+			
+			originalUri = originalUri.substring(j+1);
+			i = originalUri.indexOf('{');
 		}
-		template.append("@@");
 		
 		return template.toString();
 	}
@@ -266,19 +270,27 @@ public class R2RMLMapParser {
 				bridge.setDatatype(stmt.getResource().getURI());
 			}
 		} else {
-			stmt = objectMap.getProperty(RR.parentTriplesMap);
-
-			ClassMap classMapRef = this.mapping.classMap(stmt.getResource());
-			bridge.setRefersToClassMap(classMapRef);
-			
-			stmt = objectMap.getProperty(RR.joinCondition);
-			Resource joinCondition = stmt.getResource();
-			String child = joinCondition.getProperty(RR.child).getString();
-			String childLogTable = classMap.getLogicalTable();
-			String parent = joinCondition.getProperty(RR.parent).getString();
-			String parentLogTable = classMapRef.getLogicalTable();
-			
-			bridge.addJoin(childLogTable + "." + child + " => " + parentLogTable + "." + parent);
+			stmt = objectMap.getProperty(RR.template);
+			if (stmt != null) {
+				bridge.setPattern(genUriTemplate(classMap.getLogicalTable(), stmt.getString()));
+			} else {
+				stmt = objectMap.getProperty(RR.parentTriplesMap);
+	
+				ClassMap classMapRef = this.mapping.classMap(stmt.getResource());
+				bridge.setRefersToClassMap(classMapRef);
+				
+				StmtIterator stmts = objectMap.listProperties(RR.joinCondition);
+				while (stmts.hasNext()) {
+					Resource joinCondition = stmts.nextStatement().getResource();
+					
+					String child = joinCondition.getProperty(RR.child).getString();
+					String childLogTable = classMap.getLogicalTable();
+					String parent = joinCondition.getProperty(RR.parent).getString();
+					String parentLogTable = classMapRef.getLogicalTable();
+					
+					bridge.addJoin(childLogTable + "." + child + " => " + parentLogTable + "." + parent);
+				}
+			}
 		}
 	}
 	

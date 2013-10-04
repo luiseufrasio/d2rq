@@ -94,9 +94,9 @@ public abstract class CommandLineTool {
 		if (cmd.hasArg(verboseArg)) {
 			Log4jHelper.setVerboseLogging();
 		}
-		if (cmd.hasArg(debugArg)) {
+//		if (cmd.hasArg(debugArg)) {
 			Log4jHelper.setDebugLogging();
-		}
+//		}
 
 		if (cmd.numItems() == minArguments && supportImplicitJdbcURL && cmd.hasArg(sqlFileArg)) {
 			loader.setJdbcURL(SystemLoader.DEFAULT_JDBC_URL);
